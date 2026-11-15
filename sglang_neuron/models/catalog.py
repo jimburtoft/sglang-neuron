@@ -210,6 +210,21 @@ MODELS = {
     ),
     "Qwen3ForCausalLM": ModelSpec(package="sglang_neuron.models.qwen3", kv_cache_dtypes=("auto", "bf16", "bfloat16")),
     "Glm4ForCausalLM": ModelSpec(package="sglang_neuron.models.glm4", kv_cache_dtypes=("auto", "bf16", "bfloat16")),
+    # the dense hybrid of the Qwen3.5 family (Qwen3.8-27B: 48 gated delta net and 16 gated attention layers), on the
+    # Qwen3.5 per-layer kernels, which run one rank per physical NeuronCore
+    "Qwen3_5ForConditionalGeneration": ModelSpec(package="sglang_neuron.models.qwen38",
+                                                 kv_cache_dtypes=("auto", "bf16", "bfloat16"),
+                                                 launch_hooks="sglang_neuron.models.qwen38.launch",
+                                                 kv_pool_class="sglang_neuron.models.qwen38.kv_pool:Qwen38SlotKVPool",
+                                                 # one rank per physical core leaves about 5 GB of a trn2 core's
+                                                 # 12 GB after the weights; the plugin's 3584 MiB page does not fit
+                                                 # beside the loaded programs (TDRV "Failed to allocate virtual
+                                                 # scratchpad")
+                                                 scratchpad_page_mb=(("aggregated", 1024),),
+                                                 # the radix cache keeps the GDN state at each prefill chunk's end
+                                                 # (the chunk-keyed tree; models/qwen38/runtime.capture_tracks)
+                                                 chunk_state_checkpoints=True,
+                                                 logical_nc=1),
     "Qwen3MoeForCausalLM": ModelSpec(package="sglang_neuron.models.qwen3_moe",
                                      kv_cache_dtypes=("auto", "bf16", "bfloat16")),
     # the paged giga prefill writes each forward's final GDN state into SGLang's tracking slot, so the chunk-keyed tree
