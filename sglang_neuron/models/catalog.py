@@ -117,6 +117,11 @@ class ModelSpec:
     # the launching process, before SGLang resolves the arguments, and every scheduler). Its module-level imports are
     # stdlib only: the launching process imports it before it has decided anything else.
     launch_hooks: str = ""
+    # the MHA KV pool class the model's graphs read, as "module:Class" (a NeuronMHATokenToKVPoolKind subclass), ""
+    # for the platform's block-layout pool. platform.get_kv_pool_cls answers it for the served model, which is how a
+    # model on the platform runtime (no megakernel pool layout) gets a pool in its kernels' layout, for instance under
+    # SGLang's hybrid linear-attention pool
+    kv_pool_class: str = ""
     # a module of the model's PD KV hand-off, for a decode whose KV lives in its kernel's own caches rather than SGLang's
     # pool (sglang_patches.kernel_kv_handoff: DECODE_HOOKS and PREFILL_HOOKS), "" for upstream's path
     kv_handoff: str = ""
