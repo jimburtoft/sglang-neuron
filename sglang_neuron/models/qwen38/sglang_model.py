@@ -53,7 +53,10 @@ class Qwen3_5ForConditionalGeneration(ModelHost):
         # rows, so the pool carries a working bank: row 0 is the framework's scratch, batch row b uses bank row
         # b + 1, and the runtime moves slots to rows around each step (runtime.py)
         rows = int(getattr(get_server_args(), "max_running_requests", None) or 8) + 1
-        self.state_spec = dataclasses.replace(state_spec(self.qwen38_dims, self.qwen38_layout), working_rows=rows)
+        from sglang_neuron.models.qwen38.state import temporal_dtype
+
+        self.state_spec = dataclasses.replace(
+            state_spec(self.qwen38_dims, self.qwen38_layout, temporal_dtype()), working_rows=rows)
         # the working-bank operations: this model's row programs (bank_ops: the publish an in-place indirect-DMA
         # write, whose cost follows the rows, not the pool), and compiled canonical-slot copies whose buckets match
         # this server's slot count. The platform's default buckets reach 256 slots, and a 256-slot copy of 48 layers

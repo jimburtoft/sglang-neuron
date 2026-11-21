@@ -22,11 +22,26 @@ class Qwen38StatePool(Qwen35StatePool):
     """The GDN state pool. Same storage and kernel views as Qwen3.5's; the name keeps the launch's refusals readable."""
 
 
-def state_spec(dims: Qwen38Dims, layout: Qwen38Layout) -> StateSpec:
+#: the temporal state dtypes the kernels store (``--mamba-ssm-dtype``): the recurrence runs in fp32 in SBUF either way,
+#: the state DMAs casting a bfloat16 state on the way in and out, so bfloat16 halves the state pool per request
+TEMPORAL_DTYPES = ("float32", "bfloat16")
+
+
+def temporal_dtype(server_args=None) -> str:
+    """The launch's ``--mamba-ssm-dtype``, float32 when unset."""
+    if server_args is None:
+        from sglang.srt.runtime_context import get_server_args
+
+        server_args = get_server_args()
+    value = str(getattr(server_args, "mamba_ssm_dtype", None) or "float32")
+    return {"bf16": "bfloat16", "fp32": "float32"}.get(value, value)
+
+
+def state_spec(dims: Qwen38Dims, layout: Qwen38Layout, temporal: str = "float32") -> StateSpec:
     """The GDN state one rank holds, with the temporal component in the kernels' layout."""
     spec = gdn_spec(layer_ids=dims.gdn_layers, tp_size=layout.tp_size, num_k_heads=dims.num_k_heads,
                     num_v_heads=dims.num_v_heads, head_k_dim=dims.head_k_dim, head_v_dim=dims.head_v_dim,
-                    conv_kernel=dims.conv_kernel, temporal_dtype="float32", conv_dtype="bfloat16",
+                    conv_kernel=dims.conv_kernel, temporal_dtype=temporal, conv_dtype="bfloat16",
                     numerics="qwen35-giga")
     temporal = dataclasses.replace(
         spec.recurrent, physical_shape=(dims.head_k_dim, layout.gdn_v_heads, dims.head_v_dim))
