@@ -23,9 +23,12 @@ logger = logging.getLogger(__name__)
 
 class Qwen3_5ForConditionalGeneration(ModelHost):
     name = "Qwen3.8"
-    # the prefill attention is the model's own kernel, not the platform's segmented one, and it runs whole chunks
+    # the prefill attention is the model's own kernel, not the platform's segmented one
     segmented_prefill = False
-    prefill_ladder = False
+    # a prompt's last piece runs the smallest KV segment tile that holds it (512, 1024, ... below the chunk): both
+    # prefill kernels take any multiple of 512 tokens (gdn_prefill's 512-token blocks, attn_prefill's L % 512), so a
+    # short prompt does not pay for a whole padded chunk
+    prefill_ladder = True
     # the decode reads only its graph's block-table width (paged pool), so shorter-context decode graphs serve
     # short rows: a quarter, a half and the whole context
     decode_context_ladder = True

@@ -89,7 +89,8 @@ python3 -m sglang.launch_server --model-path /models/Qwen3.8-27B --tp-size 8 \
   a quarter, a half and the whole of the context; a step runs the smallest that holds it. With the flags above that is
   9 decode graphs: the first launch on an empty compile cache took 22 minutes on a trn2.3xlarge, a relaunch with the
   same flags and cache about 6 minutes.
-- **Prefill.** One graph of the chunk.
+- **Prefill.** One graph of the chunk and one of each smaller KV segment tile (512 and 1024 at a 2048-token chunk);
+  a prompt's last piece runs the smallest that holds it, so a short prompt does not pay for the whole chunk.
 - `--max-total-tokens` sizes the KV pool, whose page count is a dimension of every graph; state it, so a relaunch finds
   its graphs in the compile cache.
 
