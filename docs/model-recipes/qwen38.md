@@ -91,6 +91,9 @@ python3 -m sglang.launch_server --model-path /models/Qwen3.8-27B --tp-size 8 \
   same flags and cache about 6 minutes.
 - **Prefill.** One graph of the chunk and one of each smaller KV segment tile (512 and 1024 at a 2048-token chunk);
   a prompt's last piece runs the smallest that holds it, so a short prompt does not pay for the whole chunk.
+- `--mamba-ssm-dtype bfloat16` stores the GDN state in bf16 (the recurrence still runs in fp32 on chip), which halves the
+  state pool: 32 rows with the prefill ladder at `--context-length 4096 --max-total-tokens 32768` then load, which they
+  do not with the float32 state. GSM8K is unchanged (0.990).
 - `--max-total-tokens` sizes the KV pool, whose page count is a dimension of every graph; state it, so a relaunch finds
   its graphs in the compile cache.
 
